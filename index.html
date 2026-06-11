@@ -27,11 +27,9 @@
             color: #ff9800;
         }
         #map {
-            /* Ocupa el resto de la pantalla del celular */
             width: 100vw;
             height: calc(100vh - 50px);
         }
-        /* Estilo para el cuadro que brota al tocar un lote */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e !important;
             color: #fff !important;
@@ -54,49 +52,48 @@
 <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
 <script>
-    // 1. Inicializar el mapa centrado en las coordenadas que venían en tu enlace
-    // Con un zoom de 13 para que se vea toda el área de jale desde el arranque
+    // 1. Inicializar el mapa centrado en tus coordenadas de Hermiston / Umatilla County
     const map = L.map('map').setView([45.741711799137974, -119.82943168453367], 13);
 
-    // 2. Agregar un mapa base oscuro (tipo satélite o nocturno) para que combine con AgroMix
-    // Usamos el de CartoDB que es limpio y no cansa la vista en la noche
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    // 2. Mapa base satelital de Esri para que puedas ver los círculos y los pivotes reales del terreno
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
     }).addTo(map);
 
-    // 3. Conectar tu mapa público de ArcGIS usando tu ID exacto:
-    // El itemID que pasaste: ab094c965221405ebd4d59345e7ec3df
-    const mapServiceUrl = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/FeatureServer/0"; 
-    
-    // NOTA: Como la capa de Esri requiere el endpoint del FeatureServer de ese itemID, 
-    // esri-leaflet lo va a buscar directamente con esta función:
+    // 3. Conectar el mapa público mediante el servicio web de ArcGIS Online
+    // Este conector lee directamente las figuras de los lotes sobre el satélite
+    L.esri.mapService({
+        url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/MapServer'
+    }).addTo(map);
+
+    // 4. Agregar la capa de los polígonos interactivos (para poder hacer clic en las parcelas)
     L.esri.featureLayer({
-        url: 'https://maps.arcgis.com/sharing/rest/content/items/ab094c965221405ebd4d59345e7ec3df/data',
+        url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/FeatureServer/0',
         style: function () {
             return {
-                color: '#4caf50',       // Orillas de tus lotes en color verde
+                color: '#ff9800',       // Orillas de tus lotes en color naranja para que resalten sobre el satélite
                 weight: 2,              // Grosor de la línea
-                fillColor: '#2e7d32',   // Color de relleno
-                fillOpacity: 0.2        // Transparencia del lote
+                fillColor: '#ff9800',   // Color de relleno
+                fillOpacity: 0.1        // Transparencia del lote
             };
         }
     }).addTo(map).on('click', function(e) {
-        // 4. Qué pasa cuando tocas un lote en la pantalla:
-        // Va a buscar los datos que tenga guardados ese polígono (Nombre del lote, Acres, etc.)
         const props = e.layer.feature.properties;
         
-        // Creamos un texto para mostrar la info del lote en el celular
-        let popupText = "<div style='font-size:14px;'>";
-        popupText += "<b>🌾 Lote Detectado</b><br><br>";
+        let popupText = "<div style='font-size:14px; padding: 5px;'>";
+        popupText += "<b style='color:#ff9800;'>🌾 Lote Detectado</b><br><br>";
         
-        // Si la base de datos de tu ArcGIS tiene campos comunes, los va a pintar aquí:
-        if(props.FieldName || props.name || props.lote) {
-            popupText += "<b>Nombre:</b> " + (props.FieldName || props.name || props.lote) + "<br>";
+        // Imprime todas las propiedades disponibles en la consola para saber qué nombres tienen tus columnas
+        console.log("Datos del lote clicado:", props);
+
+        // Muestra los datos dinámicos que tenga el mapa público
+        if (props.FieldName || props.name || props.Name || props.Lote) {
+            popupText += "<b>Nombre:</b> " + (props.FieldName || props.name || props.Name || props.Lote) + "<br>";
         }
-        if(props.Acres || props.acres || props.area) {
-            popupText += "<b>Acres:</b> <span style='color:#ffeb3b; font-weight:bold;'>" + (props.Acres || props.acres || props.area) + " ac</span><br>";
+        if (props.Acres || props.acres || props.Area || props.calc_acres) {
+            popupText += "<b>Acres:</b> <span style='color:#ffeb3b; font-weight:bold;'>" + (props.Acres || props.acres || props.Area || props.calc_acres) + " ac</span><br>";
         } else {
-            popupText += "<span style='color:#aaa; font-size:11px;'>Toca para cargar datos en AgroMix</span>";
+            popupText += "<span style='color:#aaa; font-size:11px;'>Polígono cargado correctamente.</span>";
         }
         popupText += "</div>";
 
