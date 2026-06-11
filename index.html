@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Clon de Mapa Personalizado - AgroMix</title>
+    <title>Mapa Custom Fields - AgroMix</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     
@@ -12,13 +12,13 @@
             margin: 0;
             padding: 0;
             background-color: #121212;
-            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         }
         #header {
             padding: 12px;
             text-align: center;
             background-color: #1e1e1e;
-            border-bottom: 2px solid #00e676;
+            border-bottom: 2px solid #4caf50;
         }
         h1 {
             margin: 0;
@@ -31,22 +31,22 @@
             height: calc(100vh - 48px);
         }
 
-        /* DISEÑO DEL RECUADRO ESTILO AGROMIX */
+        /* DISEÑO OSCURO PERSONALIZADO PARA EL POPUP DE LOS PIVOTES */
         .leaflet-popup-content-wrapper {
             background: #1a1a1a !important;
             color: #ffffff !important;
-            border: 2px solid #00e676; /* Borde verde neón personalizado */
+            border: 2px solid #4caf50; /* Borde verde para hacer juego */
             border-radius: 10px;
             padding: 4px;
         }
         .leaflet-popup-tip {
             background: #1a1a1a !important;
-            border: 1px solid #00e676;
+            border: 1px solid #4caf50;
         }
         .popup-title {
             font-size: 16px;
             font-weight: bold;
-            color: #00e676;
+            color: #4caf50;
             margin-bottom: 4px;
         }
         .popup-text {
@@ -69,7 +69,7 @@
 <body>
 
 <div id="header">
-    <h1>ING. MACIAS • FIELD MAP (CUSTOM)</h1>
+    <h1>ING. MACIAS • AGROMIX FIELDS</h1>
 </div>
 
 <div id="map"></div>
@@ -78,40 +78,41 @@
 <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
 <script>
-    // 1. Centrar el mapa en las coordenadas de tus lotes
+    // 1. Inicializar el mapa centrado en la zona de tus pivotes en Hermiston
     const map = L.map('map').setView([45.741711799137974, -119.82943168453367], 13);
 
-    // 2. Capa base de satélite limpia
+    // 2. Capa base satelital oficial de Esri (World Imagery)
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-    // 3. Jalar la capa de información original pero CAMBIANDO LOS COLORES des de el código
+    // 3. Jalar la capa original "Fields (Searchable)" usando el ID público de tu mapa
+    // El script busca el FeatureServer del mapa ab094c965221405ebd4d59345e7ec3df
     L.esri.featureLayer({
         url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/FeatureServer/0',
         
-        // AQUÍ PASA LA MAGIA: Customizamos el diseño de los lotes de ArcGIS
+        // AQUÍ AJUSTAS LOS COLORES Y ESTILOS DE TUS CÍRCULOS DESDE EL CÓDIGO
         style: function (feature) {
             return {
-                color: '#00e676',       // Cambié el borde a un Verde Neón brillante
-                weight: 2.5,            // Grosor de la línea divisoria
-                fillColor: '#00796b',   // Color de fondo de los círculos (Verde azulado)
-                fillOpacity: 0.25       // Opacidad para alcanzar a ver el cultivo abajo
+                color: '#2cba00',       // Borde verde brillante personalizado
+                weight: 2,              // Grosor de la línea del círculo
+                fillColor: '#a3ff73',   // Color de relleno de las parcelas
+                fillOpacity: 0.25       // Opacidad para no tapar el cultivo de abajo
             };
         }
     }).addTo(map).on('click', function(e) {
         
-        // Jalamos los atributos originales de la base de datos de tu mapa
+        // Extraemos las propiedades y columnas originales de tu base de datos de ArcGIS
         const props = e.layer.feature.properties;
         
-        // Extraemos dinámicamente el Lote y los Acres tal como vienen en tu ArcGIS
+        // Buscamos las columnas que coincidan con tus etiquetas (Nombre del pivote y su tamaño)
         const loteNum = props.FieldName || props.name || props.Name || props.Lote || "N/A";
         const acresNum = props.Acres || props.acres || props.Area || props.calc_acres || "0.00";
 
-        // Diseñamos el recuadro con nuestro nuevo estilo
+        // Armamos el recuadro negro con el nuevo diseño y el botón interactivo
         let popupContent = `
-            <div style="min-width: 150px;">
+            <div style="min-width: 150px; text-align: left;">
                 <div class="popup-title">Lote ${loteNum}</div>
                 <div class="popup-text">Tamaño: <b>${acresNum} ac</b></div>
-                <button class="popup-btn" onclick="guardarDato('${loteNum}', '${acresNum}')">Save to History</button>
+                <button class="popup-btn" onclick="inyectarDato('${loteNum}', '${acresNum}')">Save to History</button>
             </div>
         `;
 
@@ -121,8 +122,9 @@
             .openOn(map);
     });
 
-    function guardarDato(lote, acres) {
-        alert("Enviando " + acres + " acres del Lote " + lote + " a la mezcla de AgroMix.");
+    // Función de prueba para simular el envío de datos a la calculadora
+    function inyectarDato(lote, acres) {
+        alert("Pivote seleccionado: Lote " + lote + "\n" + acres + " acres enviados listos para calcular mezcla.");
     }
 </script>
 
