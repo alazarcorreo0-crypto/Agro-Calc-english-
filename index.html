@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Mapa - AgroMix</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #121212;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            color: #ffffff;
+        }
+        #header {
+            padding: 12px;
+            text-align: center;
+            background-color: #1e1e1e;
+            border-bottom: 2px solid #2e7d32;
+        }
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #ff9800;
+        }
+        #map {
+            /* Ocupa el resto de la pantalla del celular */
+            width: 100vw;
+            height: calc(100vh - 50px);
+        }
+        /* Estilo para el cuadro que brota al tocar un lote */
+        .leaflet-popup-content-wrapper {
+            background: #1e1e1e !important;
+            color: #fff !important;
+            border: 1px solid #333;
+        }
+        .leaflet-popup-tip {
+            background: #1e1e1e !important;
+        }
+    </style>
+</head>
+<body>
+
+<div id="header">
+    <h1>🚜 AGROMIX • MAP TEST</h1>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
+
+<script>
+    // 1. Inicializar el mapa centrado en las coordenadas que venían en tu enlace
+    // Con un zoom de 13 para que se vea toda el área de jale desde el arranque
+    const map = L.map('map').setView([45.741711799137974, -119.82943168453367], 13);
+
+    // 2. Agregar un mapa base oscuro (tipo satélite o nocturno) para que combine con AgroMix
+    // Usamos el de CartoDB que es limpio y no cansa la vista en la noche
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; OpenStreetMap &copy; CARTO'
+    }).addTo(map);
+
+    // 3. Conectar tu mapa público de ArcGIS usando tu ID exacto:
+    // El itemID que pasaste: ab094c965221405ebd4d59345e7ec3df
+    const mapServiceUrl = "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/FeatureServer/0"; 
+    
+    // NOTA: Como la capa de Esri requiere el endpoint del FeatureServer de ese itemID, 
+    // esri-leaflet lo va a buscar directamente con esta función:
+    L.esri.featureLayer({
+        url: 'https://maps.arcgis.com/sharing/rest/content/items/ab094c965221405ebd4d59345e7ec3df/data',
+        style: function () {
+            return {
+                color: '#4caf50',       // Orillas de tus lotes en color verde
+                weight: 2,              // Grosor de la línea
+                fillColor: '#2e7d32',   // Color de relleno
+                fillOpacity: 0.2        // Transparencia del lote
+            };
+        }
+    }).addTo(map).on('click', function(e) {
+        // 4. Qué pasa cuando tocas un lote en la pantalla:
+        // Va a buscar los datos que tenga guardados ese polígono (Nombre del lote, Acres, etc.)
+        const props = e.layer.feature.properties;
+        
+        // Creamos un texto para mostrar la info del lote en el celular
+        let popupText = "<div style='font-size:14px;'>";
+        popupText += "<b>🌾 Lote Detectado</b><br><br>";
+        
+        // Si la base de datos de tu ArcGIS tiene campos comunes, los va a pintar aquí:
+        if(props.FieldName || props.name || props.lote) {
+            popupText += "<b>Nombre:</b> " + (props.FieldName || props.name || props.lote) + "<br>";
+        }
+        if(props.Acres || props.acres || props.area) {
+            popupText += "<b>Acres:</b> <span style='color:#ffeb3b; font-weight:bold;'>" + (props.Acres || props.acres || props.area) + " ac</span><br>";
+        } else {
+            popupText += "<span style='color:#aaa; font-size:11px;'>Toca para cargar datos en AgroMix</span>";
+        }
+        popupText += "</div>";
+
+        L.popup()
+            .setLatLng(e.latlng)
+            .setContent(popupText)
+            .openOn(map);
+    });
+</script>
+
+</body>
+</html>
