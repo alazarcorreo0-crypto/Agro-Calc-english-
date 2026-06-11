@@ -30,20 +30,55 @@
             width: 100vw;
             height: calc(100vh - 50px);
         }
+
+        /* ======================================================= */
+        /* DISEÑO PERSONALIZADO DEL POPUP (ESTILO RECUADRO NEGRO)  */
+        /* ======================================================= */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e !important;
-            color: #fff !important;
-            border: 1px solid #333;
+            color: #ffffff !important;
+            border: 2px solid #333333;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            padding: 6px;
         }
         .leaflet-popup-tip {
             background: #1e1e1e !important;
+            border: 1px solid #333333;
+        }
+        .popup-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+        .popup-acres {
+            font-size: 14px;
+            color: #b0bec5;
+            margin-bottom: 12px;
+        }
+        .popup-btn {
+            width: 100%;
+            padding: 10px;
+            background-color: #e0e0e0;
+            color: #000000;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            box-sizing: border-box;
+        }
+        .popup-btn:active {
+            opacity: 0.8;
         }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <h1>🚜 AGROMIX • MAP TEST</h1>
+    <h1>🚜 AGROMIX • FIELD MAP</h1>
 </div>
 
 <div id="map"></div>
@@ -52,56 +87,55 @@
 <script src="https://unpkg.com/esri-leaflet@3.0.12/dist/esri-leaflet.js"></script>
 
 <script>
-    // 1. Inicializar el mapa centrado en tus coordenadas de Hermiston / Umatilla County
+    // 1. Inicializar el mapa centrado en tus coordenadas reales de Hermiston
     const map = L.map('map').setView([45.741711799137974, -119.82943168453367], 13);
 
-    // 2. Mapa base satelital de Esri para que puedas ver los círculos y los pivotes reales del terreno
+    // 2. Capa base de satélite oficial de Esri
     L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        attribution: 'Esri &mdash; Satellite Community Maps'
     }).addTo(map);
 
-    // 3. Conectar el mapa público mediante el servicio web de ArcGIS Online
-    // Este conector lee directamente las figuras de los lotes sobre el satélite
-    L.esri.mapService({
-        url: 'https://tiles.arcgis.com/tiles/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/MapServer'
-    }).addTo(map);
-
-    // 4. Agregar la capa de los polígonos interactivos (para poder hacer clic en las parcelas)
+    // 3. Cargar las líneas e interacción de tus pivotes desde tu servidor de ArcGIS
     L.esri.featureLayer({
         url: 'https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/World_Imagery/FeatureServer/0',
         style: function () {
             return {
-                color: '#ff9800',       // Orillas de tus lotes en color naranja para que resalten sobre el satélite
-                weight: 2,              // Grosor de la línea
-                fillColor: '#ff9800',   // Color de relleno
-                fillOpacity: 0.1        // Transparencia del lote
+                color: '#4caf50',       // Orillas verdes como en tu ArcGIS Field Maps original
+                weight: 2,
+                fillColor: '#2e7d32',
+                fillOpacity: 0.15       // Transparencia ligera sobre el círculo de riego
             };
         }
     }).addTo(map).on('click', function(e) {
+        // Al hacer clic, extraemos las columnas de la base de datos de ArcGIS
         const props = e.layer.feature.properties;
         
-        let popupText = "<div style='font-size:14px; padding: 5px;'>";
-        popupText += "<b style='color:#ff9800;'>🌾 Lote Detectado</b><br><br>";
-        
-        // Imprime todas las propiedades disponibles en la consola para saber qué nombres tienen tus columnas
-        console.log("Datos del lote clicado:", props);
+        // Buscamos dinámicamente cómo se llaman tus columnas (Lote / Acres)
+        const nombreLote = props.FieldName || props.name || props.Name || props.Lote || "Desconocido";
+        const acresLote = props.Acres || props.acres || props.Area || props.calc_acres || "0.00";
 
-        // Muestra los datos dinámicos que tenga el mapa público
-        if (props.FieldName || props.name || props.Name || props.Lote) {
-            popupText += "<b>Nombre:</b> " + (props.FieldName || props.name || props.Name || props.Lote) + "<br>";
-        }
-        if (props.Acres || props.acres || props.Area || props.calc_acres) {
-            popupText += "<b>Acres:</b> <span style='color:#ffeb3b; font-weight:bold;'>" + (props.Acres || props.acres || props.Area || props.calc_acres) + " ac</span><br>";
-        } else {
-            popupText += "<span style='color:#aaa; font-size:11px;'>Polígono cargado correctamente.</span>";
-        }
-        popupText += "</div>";
+        // Estructuramos el contenido interactivo con el botón "Save to History"
+        let popupContent = `
+            <div style="min-width: 160px; text-align: left;">
+                <div class="popup-title">Lote ${nombreLote}</div>
+                <div class="popup-acres">Acres: ${acresLote}</div>
+                <button class="popup-btn" onclick="seleccionarLote('${nombreLote}', '${acresLote}')">Save to History</button>
+            </div>
+        `;
 
         L.popup()
             .setLatLng(e.latlng)
-            .setContent(popupText)
+            .setContent(popupContent)
             .openOn(map);
     });
+
+    // 5. Función que se activa al presionar el botón del recuadro
+    function seleccionarLote(nombre, acres) {
+        // Por ahora, como es tu repositorio de pruebas, te lanzará una alerta confirmando los datos.
+        // Cuando unamos esto a tu AgroMix principal, en lugar de una alerta, este botón
+        // va a inyectar el valor de los acres directo en la calculadora y te abrirá la pestaña de mezcla.
+        alert("Lote seleccionado: " + nombre + "\nAcres enviados: " + acres + " ac");
+    }
 </script>
 
 </body>
